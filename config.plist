@@ -1,0 +1,45 @@
+<key>Offsets</key>
+<dict>
+    <key>moduleName</key>
+    <string>libgame-BPM-GooglePlay-Gold-Release-Module</string>
+    <key>baseAddress</key>
+    <integer>0</integer> <!-- 0 means find it dynamically -->
+    <key>SharedGameManager</key>
+    <integer>0x34E2238</integer>
+    <key>SharedMenuManager</key>
+    <integer>0x350AA84</integer>
+    <key>SharedUserSettings</key>
+    <integer>0x35AFD50</integer>
+    <key>VisualCue</key>
+    <integer>0x2D8</integer>
+    <key>AimAngle</key>
+    <integer>0x18</integer>
+    <key>Power</key>
+    <integer>0x280</integer>
+    <key>Spin</key>
+    <integer>0x298</integer>
+    <key>MenuStateManager</key>
+    <integer>0x284</integer>
+    <key>GameStateManager</key>
+    <integer>0x300</integer>
+    <key>GameRules</key>
+    <integer>0x2A8</integer>
+    <key>GameMode</key>
+    <integer>0x370</integer>
+    <key>Table</key>
+    <integer>0x2AC</integer>
+    <key>BallsCount</key>
+    <integer>0x4</integer>
+    <key>BallsEntry</key>
+    <integer>0xC</integer>
+    <key>BallsList</key>
+    <integer>0x2F0</integer>
+    <key>BallPosition</key>
+    <integer>0x28</integer>
+    <key>BallClassification</key>
+    <integer>0x78</integer>
+    <key>BallState</key>
+    <integer>0x7C</integer>
+    <key>PlayerClassification</key>
+    <integer>0x5C</integer>
+</dict>

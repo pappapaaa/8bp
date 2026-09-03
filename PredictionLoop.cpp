@@ -1,0 +1,12 @@
+#include "PredictionLoop.h"
+#include <chrono>
+#include <algorithm>
+#include <cmath>
+#include <cstring>
+#include <memory>
+#include <utility>
+PredictionLoop::PredictionLoop(ActiveProvider a,ShotProvider s,std::shared_ptr<PhysicsSimulator>p,std::shared_ptr<PoolLive::SharedMemoryWriter>w):active_(std::move(a)),shot_(std::move(s)),simulator_(std::move(p)),writer_(std::move(w)){}
+PredictionLoop::~PredictionLoop(){stop();}
+void PredictionLoop::start(){if(!running_.exchange(true))thread_=std::thread(&PredictionLoop::run,this);}
+void PredictionLoop::stop(){if(running_.exchange(false)&&thread_.joinable())thread_.join();}
+void PredictionLoop::run(){Shot previous{};bool havePrevious=false;auto next=std::chrono::steady_clock::now();while(running_){next+=std::chrono::milliseconds(16);if(active_&&active_()&&simulator_&&writer_&&writer_->isOpen()){Shot current=shot_?shot_():Shot{};bool changed=!havePrevious||std::abs(current.angle-previous.angle)>1e-9||std::abs(current.power-previous.power)>1e-6||std::abs(current.spin.x-previous.spin.x)>1e-6||std::abs(current.spin.y-previous.spin.y)>1e-6||std::abs(current.spin.z-previous.spin.z)>1e-6;if(changed){ShotResult result=simulator_->runPrediction(current);PoolLive::TrajectoryFrame frame{};frame.magic=PoolLive::kMagic;frame.version=PoolLive::kVersion;frame.timestampNanoseconds=(uint64_t)std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();if(!result.trajectory.empty()){const auto&last=result.trajectory.back();frame.ballCount=(uint32_t)std::min<size_t>(last.balls.size(),PoolLive::kMaxBalls);for(uint32_t i=0;i<frame.ballCount;++i){frame.positionCounts[i]=0;for(const auto&sample:result.trajectory){for(const auto&b:sample.balls)if(b.index==(int)i&&frame.positionCounts[i]<PoolLive::kMaxPositions){frame.positions[i][frame.positionCounts[i]++]={(float)b.position.x,(float)b.position.y};break;}}frame.predictedPositions[i]={(float)last.balls[i].position.x,(float)last.balls[i].position.y};frame.onTable[i]=last.balls[i].onTable?1:0;}}frame.shotState=result.settled?1:0;for(const auto&event:result.collisions)if(event.type=="pocket"){for(uint32_t i=0;i<PoolLive::kPocketCount;++i){if(i<6)frame.pocketStatus[i]=1;break;}}writer_->writeFrame(frame);previous=current;havePrevious=true;}}std::this_thread::sleep_until(next);if(std::chrono::steady_clock::now()>next+std::chrono::milliseconds(100))next=std::chrono::steady_clock::now();}}

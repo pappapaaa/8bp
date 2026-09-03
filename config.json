@@ -1,0 +1,11 @@
+{
+  "table": { "width": 100.0, "height": 50.0,
+    "pockets": [{"x":0,"y":0},{"x":50,"y":0},{"x":100,"y":0},{"x":0,"y":50},{"x":50,"y":50},{"x":100,"y":50}] },
+  "balls": [
+    {"index":0,"classification":"cue","x":25,"y":25},
+    {"index":1,"classification":"solid","x":55,"y":25},
+    {"index":2,"classification":"solid","x":58,"y":23},
+    {"index":3,"classification":"stripe","x":58,"y":27}
+  ],
+  "shot": { "angle": 0.0, "power": 120.0, "spin": {"x":0.0,"y":0.0,"z":0.0} }
+}
