@@ -5,6 +5,7 @@
 #include "Prediction.h"
 #include "SharedMemoryWriter.h"
 #include "PredictionLoop.h"
+#include "DebugLogger.h"
 #include <pthread.h>
 #include <unistd.h>
 #include <algorithm>
@@ -37,13 +38,16 @@ static void* predictionLoop(void*) {
         sleep(1);
     }
     NSLog(@"KAKU DEV: MemoryManager initialized");
+        PoolDebug::logInfo("MemoryManager initialized using the app-owned state provider");
 
     // Open shared memory
     g_writer = std::make_shared<PoolLive::SharedMemoryWriter>("/pool_trajectory_live");
     if (!g_writer->open()) {
         NSLog(@"KAKU DEV: Failed to open shared memory");
+        PoolDebug::logWarning("Shared memory writer unavailable; overlay remains local");
     } else {
         NSLog(@"KAKU DEV: Shared memory opened");
+        PoolDebug::logInfo("Shared memory writer opened");
     }
 
     // Cache previous shot parameters to avoid unnecessary updates

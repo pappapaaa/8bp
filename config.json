@@ -1,5 +1,7 @@
 {
-  "table": { "width": 100.0, "height": 50.0,
+  "table": { "width": 100.0, "height": 50.0, "ballRadius": 1.5, "pocketRadius": 3.2,
+    "ballMass": 0.17, "cueBallMass": 0.17, "friction": 0.015, "rollingResistance": 0.985,
+    "cushionElasticity": 0.92, "spinFriction": 0.999,
     "pockets": [{"x":0,"y":0},{"x":50,"y":0},{"x":100,"y":0},{"x":0,"y":50},{"x":50,"y":50},{"x":100,"y":50}] },
   "balls": [
     {"index":0,"classification":"cue","x":25,"y":25},

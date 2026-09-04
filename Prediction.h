@@ -5,7 +5,11 @@
 struct Point2D { double x=0,y=0; };
 struct Vector3D { double x=0,y=0,z=0; };
 struct BallConfig { int index=0; Point2D position; };
-struct Table { double width=100,height=50; double ballRadius=1.5,pocketRadius=3.2; std::vector<Point2D> pockets; };
+struct Table {
+ double width=100,height=50; double ballRadius=1.5,pocketRadius=3.2;
+ double ballMass=0.17,cueBallMass=0.17,friction=0.015,rollingResistance=0.985;
+ double cushionElasticity=0.92,spinFriction=0.999; std::vector<Point2D> pockets;
+};
 struct Shot { double angle=0,power=0; Vector3D spin; };
 struct BallSample { int index; Point2D position; bool onTable; };
 struct TrajectorySample { double time; std::vector<BallSample> balls; };

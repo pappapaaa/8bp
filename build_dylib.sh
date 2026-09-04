@@ -11,6 +11,7 @@ SDKROOT="${SDKROOT:-$(xcrun --sdk "$SDK" --show-sdk-path)}"
 
 # All source files required by the iOS overlay dylib.
 SOURCES=(
+  "$ROOT/DebugLogger.mm"
   "$ROOT/Prediction.cpp"
   "$ROOT/Config.cpp"
   "$ROOT/PhysicsSimulator.cpp"

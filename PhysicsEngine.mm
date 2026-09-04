@@ -4,6 +4,7 @@
 #include <cmath>
 #include <memory>
 #include <mutex>
+#include "DebugLogger.h"
 
 static NSError *EngineError(NSString *message) { return [NSError errorWithDomain:@"PoolPhysicsEngine" code:1 userInfo:@{NSLocalizedDescriptionKey:message}]; }
 static double Number(NSDictionary *d, NSString *key, BOOL *ok) { id v=d[key]; if (![v respondsToSelector:@selector(doubleValue)]) { *ok=NO; return 0; } return [v doubleValue]; }
@@ -20,6 +21,7 @@ static Point2D PointFromObject(NSDictionary *d, BOOL *ok) { return {Number(d,@"x
         if (![table isKindOfClass:NSDictionary.class]||![pockets isKindOfClass:NSArray.class]||![balls isKindOfClass:NSArray.class]) ok=NO;
         if (!ok) { if(error)*error=EngineError(@"config.plist requires table, pockets, and balls"); return NO; }
         Table t; t.width=Number(table,@"width",&ok); t.height=Number(table,@"height",&ok); if(table[@"ballRadius"])t.ballRadius=Number(table,@"ballRadius",&ok); if(table[@"pocketRadius"])t.pocketRadius=Number(table,@"pocketRadius",&ok);
+        if(table[@"ballMass"])t.ballMass=Number(table,@"ballMass",&ok); if(table[@"cueBallMass"])t.cueBallMass=Number(table,@"cueBallMass",&ok); if(table[@"friction"])t.friction=Number(table,@"friction",&ok); if(table[@"rollingResistance"])t.rollingResistance=Number(table,@"rollingResistance",&ok); if(table[@"cushionElasticity"])t.cushionElasticity=Number(table,@"cushionElasticity",&ok); if(table[@"spinFriction"])t.spinFriction=Number(table,@"spinFriction",&ok);
         std::vector<BallConfig> b; for(NSDictionary *p in pockets) { if(![p isKindOfClass:NSDictionary.class]){ok=NO;break;} t.pockets.push_back(PointFromObject(p,&ok)); }
         for(NSDictionary *item in balls){ if(![item isKindOfClass:NSDictionary.class]){ok=NO;break;} BallConfig bc; bc.index=(int)Number(item,@"index",&ok); bc.position=PointFromObject(item,&ok); b.push_back(bc); }
         if(!ok||t.width<=0||t.height<=0||b.empty()){if(error)*error=EngineError(@"invalid numeric value in config.plist");return NO;}

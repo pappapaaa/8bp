@@ -22,6 +22,11 @@ double num(const J& j,const std::string& k){return j.at(k).n;}
 SimulationConfig loadConfig(const std::string& path){
  std::ifstream f(path);if(!f)throw std::runtime_error("cannot open config: "+path);std::stringstream b;b<<f.rdbuf();J r=P(b.str()).parse();SimulationConfig c;
  const J&t=r.at("table");c.table.width=num(t,"width");c.table.height=num(t,"height");
+ auto optional=[&](const std::string& key,double fallback){auto i=t.o.find(key);return i==t.o.end()?fallback:i->second.n;};
+ c.table.ballRadius=optional("ballRadius",c.table.ballRadius); c.table.pocketRadius=optional("pocketRadius",c.table.pocketRadius);
+ c.table.ballMass=optional("ballMass",c.table.ballMass); c.table.cueBallMass=optional("cueBallMass",c.table.cueBallMass);
+ c.table.friction=optional("friction",c.table.friction); c.table.rollingResistance=optional("rollingResistance",c.table.rollingResistance);
+ c.table.cushionElasticity=optional("cushionElasticity",c.table.cushionElasticity); c.table.spinFriction=optional("spinFriction",c.table.spinFriction);
  for(const J&p:t.at("pockets").a)c.table.pockets.push_back({num(p,"x"),num(p,"y")});
  for(const J&bll:r.at("balls").a){BallConfig b;b.index=(int)num(bll,"index");b.position={num(bll,"x"),num(bll,"y")};c.balls.push_back(b);}
  const J&s=r.at("shot");c.shot.angle=num(s,"angle");c.shot.power=num(s,"power");const J&sp=s.at("spin");c.shot.spin={num(sp,"x"),num(sp,"y"),num(sp,"z")};return c;
