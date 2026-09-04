@@ -49,7 +49,9 @@ jobs:
               https://github.com/alexzielenski/optool/releases/download/0.1/optool.zip \
               --output "$TOOL_DIR/optool.zip"
             unzip -q "$TOOL_DIR/optool.zip" -d "$TOOL_DIR/release"
-            OPTool_PATH="$(find "$TOOL_DIR/release" -type f -name optool -perm -111 -print -quit)"
+            # unzip may not preserve the executable bit, so locate by name
+            # and make it executable explicitly below.
+            OPTool_PATH="$(find "$TOOL_DIR/release" -type f -name optool -print -quit)"
 
             if [[ -z "$OPTool_PATH" ]]; then
               git clone --depth 1 https://github.com/alexzielenski/optool.git "$TOOL_DIR/source"
@@ -60,7 +62,7 @@ jobs:
                 -derivedDataPath "$TOOL_DIR/derived" \
                 CODE_SIGNING_ALLOWED=NO \
                 build
-              OPTool_PATH="$(find "$TOOL_DIR/derived" -type f -name optool -perm -111 -print -quit)"
+              OPTool_PATH="$(find "$TOOL_DIR/derived" -type f -name optool -print -quit)"
             fi
 
             test -n "$OPTool_PATH" || {
