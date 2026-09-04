@@ -1,4 +1,5 @@
 #import "LiveDataAdapter.h"
+#import <UIKit/UIKit.h>
 #include "SharedMemoryWriter.h"
 #include <algorithm>
 #include <atomic>
