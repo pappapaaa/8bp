@@ -1,29 +1,57 @@
-name: Build iOS Dylib
+name: Build Debug IPA (No Signing)
 
 on:
-  push:
-    branches: [ main ]
   workflow_dispatch:
 
 jobs:
   build:
-    runs-on: macos-latest   # macOS runner with Xcode and iOS SDK
+    runs-on: macos-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Set up Xcode
-        run: sudo xcode-select -switch /Applications/Xcode.app/Contents/Developer
-
-      - name: Make build script executable
-        run: chmod +x build_dylib.sh
+        with:
+          lfs: true
 
       - name: Build dylib
-        run: ./build_dylib.sh
+        run: |
+          chmod +x build_dylib.sh
+          ./build_dylib.sh
 
-      - name: Upload dylib artifact
+      - name: Prepare IPA
+        run: |
+          cp input.ipa $RUNNER_TEMP/input.ipa
+
+      - name: Extract IPA
+        run: |
+          mkdir -p $RUNNER_TEMP/ipa-work
+          unzip -q $RUNNER_TEMP/input.ipa -d $RUNNER_TEMP/ipa-work
+          APP_PATH=$(find $RUNNER_TEMP/ipa-work/Payload -maxdepth 1 -type d -name "*.app" | head -1)
+          echo "APP_PATH=$APP_PATH" >> $GITHUB_ENV
+
+      - name: Inject dylib
+        run: |
+          # Build insert_dylib
+          git clone --depth 1 https://github.com/tyilo/insert_dylib.git /tmp/insert_dylib
+          make -C /tmp/insert_dylib
+          INSERT_DYLIB=/tmp/insert_dylib/insert_dylib
+
+          APP_PATH="$APP_PATH"
+          EXECUTABLE=$(/usr/libexec/PlistBuddy -c "Print :CFBundleExecutable" "$APP_PATH/Info.plist")
+          EXECUTABLE_PATH="$APP_PATH/$EXECUTABLE"
+
+          mkdir -p "$APP_PATH/Frameworks"
+          cp libKAKUMod.dylib "$APP_PATH/Frameworks/"
+
+          "$INSERT_DYLIB" --inplace "@executable_path/Frameworks/libKAKUMod.dylib" "$EXECUTABLE_PATH"
+
+      - name: Repackage IPA
+        run: |
+          cd $RUNNER_TEMP/ipa-work
+          zip -qry $GITHUB_WORKSPACE/debug_output.ipa Payload
+
+      - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
-          name: libKAKUMod
-          path: libKAKUMod.dylib
+          name: debug-output-ipa
+          path: debug_output.ipa
