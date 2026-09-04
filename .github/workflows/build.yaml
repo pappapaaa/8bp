@@ -1,4 +1,4 @@
-name: Build Debug IPA (No Signing)
+name: Build unsigned injected IPA
 
 on:
   workflow_dispatch:
@@ -8,50 +8,83 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      - name: Checkout
+      - name: Check out source
         uses: actions/checkout@v4
         with:
           lfs: true
 
+      - name: Select Xcode
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+          xcode-select -p
+          xcodebuild -version
+
       - name: Build dylib
+        shell: bash
         run: |
-          chmod +x build_dylib.sh
-          ./build_dylib.sh
+          set -euo pipefail
+          if [[ -f ./build_dylib.sh ]]; then BUILD_SCRIPT=./build_dylib.sh
+          elif [[ -f ./build_module.sh ]]; then BUILD_SCRIPT=./build_module.sh
+          else echo 'Neither dylib build script exists.' >&2; exit 1; fi
+          chmod +x "$BUILD_SCRIPT"
+          "$BUILD_SCRIPT"
+          DYLIB_PATH="$(find "$GITHUB_WORKSPACE" -type f -name 'libKAKUMod.dylib' -print -quit)"
+          test -n "$DYLIB_PATH" || { echo 'No libKAKUMod.dylib was produced.' >&2; exit 1; }
+          echo "DYLIB_PATH=$DYLIB_PATH" >> "$GITHUB_ENV"
 
-      - name: Prepare IPA
+      - name: Install optool
+        shell: bash
         run: |
-          cp input.ipa $RUNNER_TEMP/input.ipa
+          set -euo pipefail
+          command -v optool >/dev/null 2>&1 || brew install optool
+          if ! command -v optool >/dev/null 2>&1; then
+            echo 'optool is unavailable. Troubleshooting: verify the Homebrew optool formula or pin macos-latest to a runner where brew install optool succeeds.' >&2
+            exit 1
+          fi
 
-      - name: Extract IPA
+      - name: Extract IPA and locate executable
+        shell: bash
         run: |
-          mkdir -p $RUNNER_TEMP/ipa-work
-          unzip -q $RUNNER_TEMP/input.ipa -d $RUNNER_TEMP/ipa-work
-          APP_PATH=$(find $RUNNER_TEMP/ipa-work/Payload -maxdepth 1 -type d -name "*.app" | head -1)
-          echo "APP_PATH=$APP_PATH" >> $GITHUB_ENV
+          set -euo pipefail
+          test -f "$GITHUB_WORKSPACE/input.ipa"
+          WORK_DIR="$RUNNER_TEMP/ipa-work"
+          rm -rf "$WORK_DIR" && mkdir -p "$WORK_DIR"
+          unzip -q "$GITHUB_WORKSPACE/input.ipa" -d "$WORK_DIR"
+          APP_PATH="$(find "$WORK_DIR/Payload" -maxdepth 1 -type d -name '*.app' -print -quit)"
+          test -n "$APP_PATH"
+          EXECUTABLE_NAME="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP_PATH/Info.plist")"
+          EXECUTABLE_PATH="$APP_PATH/$EXECUTABLE_NAME"
+          test -f "$EXECUTABLE_PATH"
+          echo "WORK_DIR=$WORK_DIR" >> "$GITHUB_ENV"
+          echo "APP_PATH=$APP_PATH" >> "$GITHUB_ENV"
+          echo "EXECUTABLE_PATH=$EXECUTABLE_PATH" >> "$GITHUB_ENV"
 
-      - name: Inject dylib
+      - name: Inject dylib with optool
+        shell: bash
         run: |
-          # Build insert_dylib
-          git clone --depth 1 https://github.com/tyilo/insert_dylib.git /tmp/insert_dylib
-          make -C /tmp/insert_dylib
-          INSERT_DYLIB=/tmp/insert_dylib/insert_dylib
-
-          APP_PATH="$APP_PATH"
-          EXECUTABLE=$(/usr/libexec/PlistBuddy -c "Print :CFBundleExecutable" "$APP_PATH/Info.plist")
-          EXECUTABLE_PATH="$APP_PATH/$EXECUTABLE"
-
+          set -euo pipefail
           mkdir -p "$APP_PATH/Frameworks"
-          cp libKAKUMod.dylib "$APP_PATH/Frameworks/"
+          cp "$DYLIB_PATH" "$APP_PATH/Frameworks/libKAKUMod.dylib"
+          chmod 755 "$EXECUTABLE_PATH" "$APP_PATH/Frameworks/libKAKUMod.dylib"
+          # Changing the executable invalidates its old signature; remove only.
+          codesign --remove-signature "$EXECUTABLE_PATH" || true
+          codesign --remove-signature "$APP_PATH/Frameworks/libKAKUMod.dylib" || true
+          optool install -c load -p '@executable_path/Frameworks/libKAKUMod.dylib' -t "$EXECUTABLE_PATH"
 
-          "$INSERT_DYLIB" --inplace "@executable_path/Frameworks/libKAKUMod.dylib" "$EXECUTABLE_PATH"
-
-      - name: Repackage IPA
+      - name: Repackage unsigned IPA
+        shell: bash
         run: |
-          cd $RUNNER_TEMP/ipa-work
-          zip -qry $GITHUB_WORKSPACE/debug_output.ipa Payload
+          set -euo pipefail
+          rm -f "$GITHUB_WORKSPACE/debug_output.ipa"
+          (cd "$WORK_DIR" && zip -qry "$GITHUB_WORKSPACE/debug_output.ipa" Payload)
+          unzip -tq "$GITHUB_WORKSPACE/debug_output.ipa"
 
-      - name: Upload IPA
+      - name: Upload unsigned IPA
         uses: actions/upload-artifact@v4
         with:
           name: debug-output-ipa
           path: debug_output.ipa
+          if-no-files-found: error
+          retention-days: 14
