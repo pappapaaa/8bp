@@ -38,44 +38,39 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if ! command -v optool >/dev/null 2>&1; then
-            brew install optool || true
-          fi
+          TOOL_DIR="$RUNNER_TEMP/optool"
+          SOURCE_DIR="$TOOL_DIR/source"
+          BIN_DIR="$TOOL_DIR/bin"
+          ARGUMENT_PARSER_DIR="$SOURCE_DIR/optool/FSArgumentParser/ArgumentParser"
 
-          if ! command -v optool >/dev/null 2>&1; then
-            TOOL_DIR="$RUNNER_TEMP/optool"
-            mkdir -p "$TOOL_DIR"
-            curl --fail --location --retry 3 \
-              https://github.com/alexzielenski/optool/releases/download/0.1/optool.zip \
-              --output "$TOOL_DIR/optool.zip"
-            unzip -q "$TOOL_DIR/optool.zip" -d "$TOOL_DIR/release"
-            # unzip may not preserve the executable bit, so locate by name
-            # and make it executable explicitly below.
-            OPTool_PATH="$(find "$TOOL_DIR/release" -type f -name optool -print -quit)"
+          git clone --depth 1 --recurse-submodules \
+            https://github.com/alexzielenski/optool.git \
+            "$SOURCE_DIR"
+          mkdir -p "$BIN_DIR"
 
-            if [[ -z "$OPTool_PATH" ]]; then
-              git clone --depth 1 https://github.com/alexzielenski/optool.git "$TOOL_DIR/source"
-              xcodebuild \
-                -project "$TOOL_DIR/source/optool.xcodeproj" \
-                -scheme optool \
-                -configuration Release \
-                -derivedDataPath "$TOOL_DIR/derived" \
-                CODE_SIGNING_ALLOWED=NO \
-                build
-              OPTool_PATH="$(find "$TOOL_DIR/derived" -type f -name optool -print -quit)"
-            fi
+          # Homebrew no longer ships optool, and the 0.1 release binary is
+          # x86_64-only. Compile a native host binary with Xcode's macOS clang.
+          ARGUMENT_PARSER_SOURCES=("$ARGUMENT_PARSER_DIR"/*.m)
+          test -f "${ARGUMENT_PARSER_SOURCES[0]}"
 
-            test -n "$OPTool_PATH" || {
-              echo 'optool could not be installed from Homebrew, the upstream release, or source.' >&2
-              echo 'Troubleshooting: inspect the optool release URL and Xcode build output, or pin a known-good macOS runner image.' >&2
-              exit 1
-            }
-            chmod +x "$OPTool_PATH"
-            echo "$(dirname "$OPTool_PATH")" >> "$GITHUB_PATH"
-          fi
+          xcrun --sdk macosx clang \
+            -fobjc-arc \
+            -fobjc-exceptions \
+            -O2 \
+            -framework Foundation \
+            -I"$SOURCE_DIR/optool" \
+            -I"$ARGUMENT_PARSER_DIR" \
+            "$SOURCE_DIR/optool/main.m" \
+            "$SOURCE_DIR/optool/headers.m" \
+            "$SOURCE_DIR/optool/NSData+Reading.m" \
+            "$SOURCE_DIR/optool/operations.m" \
+            "${ARGUMENT_PARSER_SOURCES[@]}" \
+            -o "$BIN_DIR/optool"
 
-          command -v optool
-          optool --help >/dev/null
+          chmod +x "$BIN_DIR/optool"
+          "$BIN_DIR/optool" --help >/dev/null
+          echo "$BIN_DIR" >> "$GITHUB_PATH"
+          echo "OPTOOL_PATH=$BIN_DIR/optool" >> "$GITHUB_ENV"
 
       - name: Extract IPA and locate executable
         shell: bash
@@ -104,7 +99,7 @@ jobs:
           # Changing the executable invalidates its old signature; remove only.
           codesign --remove-signature "$EXECUTABLE_PATH" || true
           codesign --remove-signature "$APP_PATH/Frameworks/libKAKUMod.dylib" || true
-          optool install -c load -p '@executable_path/Frameworks/libKAKUMod.dylib' -t "$EXECUTABLE_PATH"
+          "$OPTOOL_PATH" install -c load -p '@executable_path/Frameworks/libKAKUMod.dylib' -t "$EXECUTABLE_PATH"
 
       - name: Repackage unsigned IPA
         shell: bash
