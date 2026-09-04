@@ -14,6 +14,8 @@ struct ShotResult { bool settled=false; double duration=0; std::vector<Trajector
 
 class Prediction {
 public:
+ static constexpr int kPocketCount = 6;
+ static bool pocketStatus[kPocketCount];
  Prediction(const Table& table, const std::vector<BallConfig>& balls);
  ShotResult simulate(const Shot& shot, double sampleInterval=0.02);
  float* getShotResult(); int getShotResultSize() const;

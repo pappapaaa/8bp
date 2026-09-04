@@ -7,6 +7,8 @@
 #include "PredictionLoop.h"
 #include <pthread.h>
 #include <unistd.h>
+#include <algorithm>
+#include <chrono>
 
 // Global writer
 static std::shared_ptr<PoolLive::SharedMemoryWriter> g_writer;
