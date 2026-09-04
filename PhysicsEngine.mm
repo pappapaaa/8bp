@@ -1,4 +1,5 @@
 #import "PhysicsEngine.h"
+#import <UIKit/UIKit.h>
 #include "PhysicsSimulator.h"
 #include <cmath>
 #include <memory>
@@ -22,7 +23,7 @@ static Point2D PointFromObject(NSDictionary *d, BOOL *ok) { return {Number(d,@"x
         std::vector<BallConfig> b; for(NSDictionary *p in pockets) { if(![p isKindOfClass:NSDictionary.class]){ok=NO;break;} t.pockets.push_back(PointFromObject(p,&ok)); }
         for(NSDictionary *item in balls){ if(![item isKindOfClass:NSDictionary.class]){ok=NO;break;} BallConfig bc; bc.index=(int)Number(item,@"index",&ok); bc.position=PointFromObject(item,&ok); b.push_back(bc); }
         if(!ok||t.width<=0||t.height<=0||b.empty()){if(error)*error=EngineError(@"invalid numeric value in config.plist");return NO;}
-        auto simulator=std::make_shared<PhysicsSimulator>(SimulationConfig{t,b,Shot{}}); { std::lock_guard<std::mutex> lock(_stateMutex); _table=t; _balls=b; _simulator=simulator; _configured=YES; _latest.reset(); } return YES;
+        auto simulator=std::make_shared<PhysicsSimulator>(SimulationConfig{t,b,Shot{}}); { std::lock_guard<std::mutex> lock(_stateMutex); _table=t; _balls=b; _simulator=simulator; _configured=YES; _latest=nil; } return YES;
     } @catch(NSException *e) { if(error)*error=EngineError(e.reason ?: @"config error"); return NO; }
 }
 - (void)updateWithAngle:(double)angle power:(double)power spinX:(double)spinX spinY:(double)spinY {
