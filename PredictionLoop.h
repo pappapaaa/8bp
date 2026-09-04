@@ -1,5 +1,6 @@
 #pragma once
 #include "Prediction.h"
+#include "PhysicsSimulator.h"
 #include "SharedMemoryWriter.h"
 #include <atomic>
 #include <functional>
