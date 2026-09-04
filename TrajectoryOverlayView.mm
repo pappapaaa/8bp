@@ -5,7 +5,7 @@
 static UIColor *ColorFromValue(id value, UIColor *fallback) {
     if ([value isKindOfClass:NSString.class]) {
         NSString *hex=[value stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
-        if ([hex hasPrefix:@"#"]) hex=[hex substringFromIndex:1]; unsigned long n=0; [[NSScanner scannerWithString:hex] scanHexLongLong:&n];
+        if ([hex hasPrefix:@"#"]) hex=[hex substringFromIndex:1]; unsigned long long n=0; if (![[NSScanner scannerWithString:hex] scanHexLongLong:&n]) return fallback;
         CGFloat r,g,b,a=1; if(hex.length==6){r=((n>>16)&255)/255.0;g=((n>>8)&255)/255.0;b=(n&255)/255.0;}else if(hex.length==8){r=((n>>24)&255)/255.0;g=((n>>16)&255)/255.0;b=((n>>8)&255)/255.0;a=(n&255)/255.0;}else return fallback; return [UIColor colorWithRed:r green:g blue:b alpha:a];
     }
     if ([value isKindOfClass:NSArray.class] && [value count]>=3) { NSArray *v=value; CGFloat r=[v[0] doubleValue],g=[v[1] doubleValue],b=[v[2] doubleValue],a=[v count]>3?[v[3] doubleValue]:1; if(r>1||g>1||b>1){r/=255;g/=255;b/=255;} return [UIColor colorWithRed:r green:g blue:b alpha:a]; }
